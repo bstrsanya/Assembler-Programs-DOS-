@@ -1,16 +1,25 @@
 .model tiny
 .code
+.286
 org 100h
 locals @@
 
-Color 	    equ 1Fh
-VideoSeg    equ 0b800h
-StartCoord  equ 160 * 2 + 65 * 2
-HeightFrame equ 14
-LengthFrame equ 11
-LenConsByte equ 160
-ScanCode_Q  equ 10h
-ScanCode_W  equ 11h
+Color 	    equ 1Fh					; color text and frame
+VideoSeg    equ 0b800h				        ; addr video segment
+StartCoord  equ 160 * 2 + 65 * 2			; start coord print
+NumReg      equ 13					; number registers
+HeightFrame equ 15					; height frame
+LengthFrame equ 11					; length frame
+LenConsByte equ 160					; length consol in byte
+ScanCode_Q  equ 10h					; scan code letter Q
+ScanCode_W  equ 11h					; scan code letter W
+
+;---------------------------------------------
+;	MACROS. Write in DrawBuffer need registers
+;	Entry: 	shift across the ValueReg
+;	Exit: 	Noun
+;	Destr: 	DI
+;---------------------------------------------
 
 PutBuffer	macro	shift
 			mov ax, ValueReg + shift 	; get value reg by
@@ -57,7 +66,7 @@ Start:
 ;---------------------------------------------
 
 Int08   	proc
-
+		
 		mov cs:[ValueReg + 0],  ax	; save value registers
 		mov cs:[ValueReg + 2],  bx	;	     in memory
 		mov cs:[ValueReg + 4],  cx
@@ -70,6 +79,11 @@ Int08   	proc
 		mov cs:[ValueReg + 18], es
 		mov cs:[ValueReg + 20], ss
 		mov cs:[ValueReg + 22], cs
+				
+		pop ax				; ax = ip
+		push ax
+		mov cs:[ValueReg + 24], ax	; save value ip
+		mov ax, cs:[ValueReg]		; recovery ax
 
         	push ax bx cx dx es si di ds	; save registers
 
@@ -98,7 +112,8 @@ Int08   	proc
 		PutBuffer 18			 
 		PutBuffer 20			; 0 - shift AX, 2 - shift BX
 		PutBuffer 22			;      ...     22 - shift CS
-
+		PutBuffer 24
+		
 		pop di
 
         	mov bx, VideoSeg		; es:[di] =
@@ -122,7 +137,6 @@ Int08   	proc
 
         	add di, LenConsByte		; jmp next str
         	loop @@Begin			; if (--cx) jmp @@Begin
-
 
 	@@Finish:
         	pop ds di si es dx cx bx ax	; recovery registers
@@ -322,10 +336,11 @@ DrawStr		proc
 		ret 
 		endp
   
-Active db 0
-ValueReg dw 13 dup (0)
-NameReg db 'ax', 'bx', 'cx', 'dx', 'si', 'di', 'bp', 'sp', 'ds', 'es', 'ss', 'cs'
-DrawBuffer db 330 dup(0, Color)
+Active     db 0
+ValueReg   dw 13 dup (0)
+NameReg    db 'ax', 'bx', 'cx', 'dx', 'si', 'di', 'bp', 'sp', 'ds', 'es' 
+	       db 'ss', 'cs', 'ip'
+DrawBuffer db LengthFrame * HeightFrame * 2 dup(0, Color)
 FrameStyle db 0c9h, 0cdh, 0bbh, 0bah, ' ', 0bah, 0c8h, 0cdh, 0bch
 EOP:
 end Start
