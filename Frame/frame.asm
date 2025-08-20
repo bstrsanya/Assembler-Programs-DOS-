@@ -10,7 +10,7 @@ BaseHeightFrame equ 05h
 
 Start:
 
-	call ClearScreen	;
+	call ClearScreen
 	call ReadComLine
 	call StartLocation
 	
@@ -27,7 +27,8 @@ Start:
 ;	Destr: 	AL
 ;---------------------------------------------
 
-ClearScreen	proc
+ClearScreen	
+		proc
 
 		mov al, 3h
 		int 10h
@@ -39,60 +40,61 @@ ClearScreen	proc
 ;	Read command line
 ;	Entry: 	Noun
 ;	Exit:  	AH = color attr
-;		AL = style frame
-;		BX = addr str
-;		CL = length frame
-;		CH = height frame
+;			AL = style frame
+;			BX = addr str
+;			CL = length frame
+;			CH = height frame
 ;	Destr: 	SI, DI, DX
 ;---------------------------------------------
 
-ReadComLine	proc
+ReadComLine	
+		proc
 	
-		mov si, 80H	;const	; addr length command line
+		mov si, 80H			; addr length command line
 		mov di, 80H
 		mov cl, es:[si]		; get length command line
 	
-		mov al, "'"		; while (cx-- && ds:[di++] != "'")
-		repne scasb
+		mov al, "'"			; while (cx-- && ds:[di++] != "'")
+		repne scasb			; cl = length str
 
-		mov bx, di		; save addr beginnig str
+		mov bx, di			; save addr beginnig str
 	
-		add cl, 6	;		
+		add cl, 6			; len frame = len str + 6
 
-		mov si, 82H		; addr beginnig need data
+		mov si, 82H			; addr beginnig need data
 
-		xor dx, dx		; read height frame
+		xor dx, dx			; read height frame
 		call Atoi
 		mov ch, dl
 
-		cmp ch, 3h		; if (height < 3) height =
+		cmp ch, 3h			; if (height < 3) height =
 		jae @@Continue		;		= BaseHeightFrame	
 		mov ch, BaseHeightFrame
 
 
 	@@Continue:
-		xor dx, dx		; read color attr
+		xor dx, dx			; read color attr
 		call Atoi
 		mov ah, dl
 
-		xor dx, dx		; read color str
+		xor dx, dx			; read color str
 		call Atoi
 		mov [ColorStr], dl
 
-		xor dx, dx		; read style frame
+		xor dx, dx			; read style frame
 		call Atoi
 		mov al, dl
 
-		cmp al, 0h		; user style frame 
-		jne @@Finish
+		cmp al, 0h			; if (al == 0) 
+		jne @@Finish		; user style frame
 
 		push cx
 
 		xor cx, cx
 		mov cx, 9h			; number of characters
-		mov di, offset FrameStyle_0	; addr to save characters
-		rep movsb			; while (cx--) 
-						;	es:[di++] = ds:[si++]
+		mov di, offset FrameStyle_0
+							; addr to save characters
+		rep movsb			; while (cx--) es:[di++] = ds:[si++]
 
 		pop cx
 		xor al, al
@@ -109,32 +111,32 @@ ReadComLine	proc
 ;	Destr: SI
 ;---------------------------------------------
 
-Atoi		proc
+Atoi	proc
 
 		push ax
 		xor ax, ax
 
-		lodsb   
+		lodsb   			; al = ds:[si++]
             
 	@@Begin:
-		cmp al, 0Dh		; if (al == '\r') jmp @@Finish
+		cmp al, 0Dh			; if (al == '\r') jmp @@Finish
 		je @@Finish   
 		cmp al, '9'     	; if (al <= '9')
 		jle @@Dec
 
-	@@Hex:  			; ASCII letter -> hex_digit     
+	@@Hex:  				; ASCII letter -> hex_digit     
 		sub al, 'A' - 0Ah        
 		jmp @@Number
 
-	@@Dec:				; ASCII digit -> dec_digit
+	@@Dec:					; ASCII digit -> dec_digit
 		sub al, '0'
 		jmp @@Number
 
-	@@Number:			; Convert: digit -> number
+	@@Number:				; Convert: digit -> number
 		shl dx, 4        	
 		add dx, ax       
 
-		lodsb            			
+		lodsb				; al = ds:[si++]            			
 		cmp al, ' '      	; if (al != ' ') jmp @@Begin
 		jne @@Begin
 	
@@ -145,13 +147,14 @@ Atoi		proc
 		endp
 	
 ;---------------------------------------------
-;	Program execution delay
+;	Program execution delay (DON'T USE)
 ;	Entry: Noun
 ;	Exit:  Noun
 ;	Destr: AH, CX, DX
 ;---------------------------------------------
 
-Slowdown	proc
+Slowdown	
+		proc
 		
 		mov ah, 86h
 		mov cx, 0000h
@@ -164,12 +167,13 @@ Slowdown	proc
 ;----------------------------------------------
 ;	Calculates coordinates based on frame sizes
 ;	Entry:	CH = frame height
-;		CL = frame length
+;			CL = frame length
 ;	Exit:	DI = frame start offset (byte)
 ;	Destr:	DX
 ;----------------------------------------------
 
-StartLocation	proc
+StartLocation	
+		proc
 
 		push ax
 
@@ -179,7 +183,7 @@ StartLocation	proc
 		mov dh, al
 		dec dh
 
-		xor ax, ax		; ax = dh * 160
+		xor ax, ax			; ax = dh * 160
 		mov al, dh		
 		shl ax, 2
 		add al, dh
@@ -190,7 +194,7 @@ StartLocation	proc
 		mov dx, LengthCons	; dx = number missing column * 2	
 		sub dl, cl
 
-		add dx, ax		; dx = shift (byte) from beginnig
+		add dx, ax			; dx = shift (byte) from beginnig
 		and dl, 0FEh		; alignment shift
 
 		mov di, dx
@@ -203,17 +207,19 @@ StartLocation	proc
 ;----------------------------------------------
 ;	Management drawing frame
 ;	Entry:	DI = frame start offset (byte)
-;		AH = color attr
-;		AL = frame style
-;		CL = frame length
-;		CH = frame height
+;			AH = color attr
+;			AL = frame style
+;			CL = frame length
+;			CH = frame height
 ;	Exit:	None
 ;	Destr:	DX, DI, ES, SI, CL, CH
 ;----------------------------------------------
 
-DrawFrame	proc
+DrawFrame	
+		proc
 
-		mov si, offset FrameStyle_0	; choose frame style
+		mov si, offset FrameStyle_0	
+							; choose frame style
 		jmp @@If_1	
 	@@While_1:
 		add si, 09h			; 9 - number smb in one style
@@ -222,20 +228,20 @@ DrawFrame	proc
 		cmp al, 0h
 		jne @@While_1
 
-		mov dx, VideoSeg		; es - video segment
+		mov dx, VideoSeg	; es - video segment
 		mov es, dx
 
 		sub cl, 2			; number smb without
-						;     first and last
+							;     first and last
 		push di
-		call DrawStr			; print first line
+		call DrawStr		; print first line
 		dec ch
 
 	@@MiddleLines:	
 		pop di
-		add di, 00A0h			; shift in video memory
+		add di, 00A0h		; shift in video memory
 		push di
-		call DrawStr			; print middle line
+		call DrawStr		; print middle line
 
 		sub si, 3h			; return to need smb
 		dec ch	
@@ -243,10 +249,10 @@ DrawFrame	proc
 		cmp ch, 1h
 		jne @@MiddleLines
 				
-		add si, 3h			; 
+		add si, 3h			 
 		pop di
-		add di, 00A0h			; shift in video memory
-		call DrawStr			; print last line
+		add di, 00A0h		; shift in video memory
+		call DrawStr		; print last line
 
 		ret
 		endp
@@ -254,26 +260,27 @@ DrawFrame	proc
 ;----------------------------------------------
 ;	Draw one str
 ;	Entry:	SI = address current character
-;		ES = video memory start address
-;		AH = color attr
-;		CL = line length
+;			ES = video memory start address
+;			AH = color attr
+;			CL = line length
 ;       	CH = frame height
 ;	Assumes: DF = 0
 ;	Exit:	None
 ;	Destr:	AL, DI, SI
 ;----------------------------------------------
 
-DrawStr		proc
+DrawStr		
+		proc
 
-		cld			; flag DF = 0
+		cld					; flag DF = 0
 		push cx
 
 		xor ch, ch
 
-		lodsb			; al = smb from style, ah = color
-		stosw			; output 2 byte in console
+		lodsb				; al = smb from style, ah = color
+		stosw				; output 2 byte in console
 		lodsb
-		rep	stosw		; while (cx--) stosw
+		rep	stosw			; while (cx--) stosw
 		lodsb
 		stosw
 
